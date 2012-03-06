@@ -22,16 +22,17 @@ else:
         print "[x] Waiting for incoming on %s:%s...\r" % (host, port)
         try:
             (csock, addr) = sock.accept()
+            fsock = csock.fileno()
         except socket.timeout:
             continue
 
         print "[x] Ok....%s\r" % str( addr )
         while True:
-            r, w, e = select.select( [ csock.fileno(), pty.STDIN_FILENO ], [], [] )
-            #print r, str( [ csock.fileno(), pty.STDIN_FILENO ] )
+            r, w, e = select.select( [ fsock, pty.STDIN_FILENO ], [], [] )
+            #print r, str( [ fsock, pty.STDIN_FILENO ] )
 
-            if csock.fileno() in r:
-                dat = os.read( csock.fileno(), 1000 )
+            if fsock in r:
+                dat = os.read( fsock, 1000 )
                 if dat:
                     dat = dat.replace( '\x01', '' )    ## strip out magic byte
                     os.write( pty.STDOUT_FILENO, dat )
@@ -41,5 +42,5 @@ else:
 
             if pty.STDIN_FILENO in r:
                 dat = os.read( pty.STDIN_FILENO, 1000 )
-                os.write( csock.fileno(), dat )
+                os.write( fsock, dat )
 
