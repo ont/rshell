@@ -7,6 +7,7 @@ else:
     host = str( sys.argv[1] )
     port = int( sys.argv[2] )
     sock = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
+    sock.settimeout( 10 )
 
     try:
         sock.bind( (host, port) )
@@ -19,7 +20,11 @@ else:
     while True:
         #accept connections from outside
         print "[x] Waiting for incoming on %s:%s...\r" % (host, port)
-        (csock, addr) = sock.accept()
+        try:
+            (csock, addr) = sock.accept()
+        except socket.timeout:
+            continue
+
         print "[x] Ok....%s\r" % str( addr )
         while True:
             r, w, e = select.select( [ csock.fileno(), pty.STDIN_FILENO ], [], [] )
@@ -27,8 +32,10 @@ else:
 
             if csock.fileno() in r:
                 dat = os.read( csock.fileno(), 1000 )
-                os.write( pty.STDOUT_FILENO, dat )
-                if not dat:
+                if dat:
+                    dat = dat.replace( '\x01', '' )    ## strip out magic byte
+                    os.write( pty.STDOUT_FILENO, dat )
+                else:
                     print "[!] client close connection....\r"
                     break
 
